@@ -93,79 +93,86 @@ const register = async(req,res) =>{
 //login User
 
 const login = async (req , res )=>{
-    if(!req.body.email){
-        return res.status(400).send({
-            status : 0,
-            message: "email field is required"
-        })
-    }
-    else if(!req.body.password){
-        return res.status(400).send({
-            status : 0,
-            message : "Password field is required"
-        })
-
-    }
-    else {
-        User.find({email : req.body.email}).select("+password")
-        .exec()
-        .then(user =>{
-            if(user.length<1){
-                return res.status(400).send({
-                    status: 0,
-                    message : "email not found"
-                })                                                 
-            }
-            else{
-               // console.log(req.body);
-                bcrypt.compare(req.body.password, user[0].password, (err , result) => {
-                    // console.log("auth erre", err);
-                    if(err){
-                        return res.status(400).send({
-                            status : 0,
-                            message: "Authentication failed"
-                        })
-                    }
-                    // console.log(err);
-                    if(result){
-                        const token = jwt.sign(
-                        {
-                            email : user[0].email,
-                            userId : user[0]._id
-                        },
-                        process.env.JWT_KEY,
-                        {
-                            expiresIn: "24hr"
-                        })
-                        User.findOneAndUpdate({ user_authentication: token})
-            
-                        user[0].user_authentication = token
-
-                        user[0].save()
-                                return res.status(200).send({
-                                    status: 1,
-                                    message: 'User logged in successfully!',
-                                   // token: token,
-                                    data: user[0]
-                                });
-
-
-                    }
-                    return res.status(400).send({
-                        status: 0, 
-                        message: 'Incorrect password.'
-                    })
-                 
-                });
-                
-            }
-        
-        })
-        .catch(err => {
-            res.status(400).send({
+    try{
+        if(!req.body.email){
+            return res.status(400).send({
                 status : 0,
-                message : err
+                message: "email field is required"
             })
+        }
+        else if(!req.body.password){
+            return res.status(400).send({
+                status : 0,
+                message : "Password field is required"
+            })
+
+        }
+        else {
+            User.find({email : req.body.email}).select("+password")
+            .exec()
+            .then(user =>{
+                if(user.length<1){
+                    return res.status(400).send({
+                        status: 0,
+                        message : "email not found"
+                    })                                                 
+                }
+                else{
+                // console.log(req.body);
+                    bcrypt.compare(req.body.password, user[0].password, (err , result) => {
+                        // console.log("auth erre", err);
+                        if(err){
+                            return res.status(400).send({
+                                status : 0,
+                                message: "Authentication failed"
+                            })
+                        }
+                        // console.log(err);
+                        if(result){
+                            const token = jwt.sign(
+                            {
+                                email : user[0].email,
+                                userId : user[0]._id
+                            },
+                            process.env.JWT_KEY,
+                            {
+                                expiresIn: "24hr"
+                            })
+                            User.findOneAndUpdate({ user_authentication: token})
+                
+                            user[0].user_authentication = token
+
+                            user[0].save()
+                                    return res.status(200).send({
+                                        status: 1,
+                                        message: 'User logged in successfully!',
+                                    // token: token,
+                                        data: user[0]
+                                    });
+
+
+                        }
+                        return res.status(400).send({
+                            status: 0, 
+                            message: 'Incorrect password.'
+                        })
+                    
+                    });
+                    
+                }
+            
+            })
+            .catch(err => {
+                res.status(400).send({
+                    status : 0,
+                    message : err
+                })
+            })
+        }
+    }catch(err) {
+        res.status(400).send({
+            status : 0,
+            message : err
         })
     }
 }
@@ -228,7 +235,7 @@ const socialLogin = async (req, res) => {
         console.log('error *** ', error);
         res.status(500).json({
             status: 0,
-            message: error.message
+            message: "Something went wrong"
         });
     }
 }
@@ -258,7 +265,7 @@ const updateProfile = async(req, res) =>{
     catch (error) {
     return res.status(500).json({
     status : 0 ,
-    message : error.message ,
+    message :  'Something went wrong'
     } ) ;
     }
 }
@@ -282,178 +289,90 @@ const updateProfile = async(req, res) =>{
 
 /** Forgot password */
 const forgotPassword = async (req, res) => {
-    if(!req.body.email){
-        res.status(400).send({
-            status: 0, 
-            message: 'Email filed is required' 
-        });
-    }
-    else{
-        User.find({ email: req.body.email })
-        .exec()
-        .then(user => {
-            if(user.length < 1){
-                return res.status(404).send({
-                    status: 0, 
-                    message: 'Email not found!' 
-                });
-            }
-            else{
-                const verificationCode = Math.floor(100000 + Math.random() * 900000);
-
-                User.findByIdAndUpdate(user[0]._id, { code: verificationCode }, (err, _result) => {
-                    if(err){
-                        res.status(400).send({
-                            status: 0, 
-                            message: 'Something went wrong.' 
-                        });
-                    }
-                    if(_result){
-                        sendEmail(user[0].email, verificationCode, 'Forgot Password');
-                        res.status(200).send({
-                            status: 1, 
-                            message: 'Code successfully send to email.',
-                            data: {
-                                user_id: user[0]._id
-                            }
-                        });
-                    }
-                });
-            }
-        })
-        .catch(err => {
+    try{
+        if(!req.body.email){
             res.status(400).send({
                 status: 0, 
-                message: 'User not found' 
+                message: 'Email filed is required' 
             });
+        }
+        else{
+            User.find({ email: req.body.email })
+            .exec()
+            .then(user => {
+                if(user.length < 1){
+                    return res.status(404).send({
+                        status: 0, 
+                        message: 'Email not found!' 
+                    });
+                }
+                else{
+                    const verificationCode = Math.floor(100000 + Math.random() * 900000);
+
+                    User.findByIdAndUpdate(user[0]._id, { code: verificationCode }, (err, _result) => {
+                        if(err){
+                            res.status(400).send({
+                                status: 0, 
+                                message: 'Something went wrong.' 
+                            });
+                        }
+                        if(_result){
+                            sendEmail(user[0].email, verificationCode, 'Forgot Password');
+                            res.status(200).send({
+                                status: 1, 
+                                message: 'Code successfully send to email.',
+                                data: {
+                                    user_id: user[0]._id
+                                }
+                            });
+                        }
+                    });
+                }
+            })
+            .catch(err => {
+                res.status(400).send({
+                    status: 0, 
+                    message: 'User not found' 
+                });
+            });
+        }
+    }catch(err){
+        res.status(400).send({
+            status: 0, 
+            message: 'Something went wrong.' 
         });
     }
 }
 
 /** Verify user */
 const verifyUser = async (req, res) => {
-    if(!req.body.user_id){
-        res.status(400).send({
-            status: 0, 
-            message: 'User id filed is required' 
-        });
-    }
-    else if(!req.body.verification_code){
-        res.status(400).send({
-            status: 0, 
-            message: 'Verification code filed is required' 
-        });
-    }
-    else{
-        User.find({ _id: req.body.user_id })
-        .exec()
-        .then(result => {
-            if(!req.body.verification_code){
-                res.status(400).send({
-                    status: 0, 
-                    message: 'Verification code is required.' 
-                });
-            }
-
-            if(req.body.verification_code == result[0].code){
-
-                User.findByIdAndUpdate(req.body.user_id, { verified: 1, code: null }, (err, _result) => {
-                    if(err){
-                        res.status(400).send({
-                            status: 0, 
-                            message: 'Something went wrong.' 
-                        });
-                    }
-                    if(_result){
-                        res.status(200).send({
-                            status: 1, 
-                            message: 'Otp matched successfully.' 
-                        });
-                    }
-                });
-            }
-            else{
-                res.status(200).send({
-                    status: 0, 
-                    message: 'Verification code did not matched.' 
-                });
-            }
-        })
-        .catch(err => {
+    try{
+        if(!req.body.user_id){
             res.status(400).send({
                 status: 0, 
-                message: 'User not found' 
+                message: 'User id filed is required' 
             });
-        });
-    }
-}
-
-/** Resend code */
-const resendCode = async (req, res) => {
-    if(!req.body.user_id){
-        res.status(400).send({
-            status: 0, 
-            message: 'User id failed is required.' 
-        });
-    }
-    else{
-        User.find({ _id: req.body.user_id })
-        .exec()
-        .then(result => {
-            const verificationCode = Math.floor(100000 + Math.random() * 900000);
-    
-            User.findByIdAndUpdate(req.body.user_id, { verified: 0, code: verificationCode }, (err, _result) => {
-                if(err){
+        }
+        else if(!req.body.verification_code){
+            res.status(400).send({
+                status: 0, 
+                message: 'Verification code filed is required' 
+            });
+        }
+        else{
+            User.find({ _id: req.body.user_id })
+            .exec()
+            .then(result => {
+                if(!req.body.verification_code){
                     res.status(400).send({
                         status: 0, 
-                        message: 'Something went wrong.' 
+                        message: 'Verification code is required.' 
                     });
                 }
-                if(_result){
-                    sendEmail(result[0].email, verificationCode, "Verification Code Resend");
-                    res.status(200).send({
-                        status: 1, 
-                        message: 'Verification code resend successfully.' 
-                    });
-                }
-            });
-        })
-        .catch(err => {
-            res.status(400).send({
-                status: 0, 
-                message: 'User not found' 
-            });
-        });
-    }
-}
 
-const updatePassword = async (req, res) => {
-    if(!req.body.user_id){
-        res.status(400).send({
-            status: 0, 
-            message: 'User id filed is required.' 
-        });
-    }
-    else if(!req.body.new_password){
-        res.status(400).send({
-            status: 0, 
-            message: 'New password filed is required.' 
-        });
-    }
-    else{
-        User.find({ _id: req.body.user_id })
-        .exec()
-        .then(user => {
+                if(req.body.verification_code == result[0].code){
 
-            bcrypt.hash(req.body.new_password, 10, (error, hash) => {
-                if(error){
-                    return res.status(400).send({
-                        status: 0, 
-                        message: error
-                    });
-                }
-                else{
-                    User.findByIdAndUpdate(req.body.user_id, { password: hash }, (err, _result) => {
+                    User.findByIdAndUpdate(req.body.user_id, { verified: 1, code: null }, (err, _result) => {
                         if(err){
                             res.status(400).send({
                                 status: 0, 
@@ -463,23 +382,169 @@ const updatePassword = async (req, res) => {
                         if(_result){
                             res.status(200).send({
                                 status: 1, 
-                                message: 'Password updated successfully.' 
+                                message: 'Otp matched successfully.' 
                             });
                         }
                     });
                 }
+                else{
+                    res.status(200).send({
+                        status: 0, 
+                        message: 'Verification code did not matched.' 
+                    });
+                }
+            })
+            .catch(err => {
+                res.status(400).send({
+                    status: 0, 
+                    message: 'User not found' 
+                });
             });
-        })
-        .catch(err => {
-            res.status(400).send({
-                status: 0, 
-                message: 'User not found.'
-            });
+        }
+    }catch(err){
+        res.status(400).send({
+            status: 0, 
+            message: 'Something went wrong. Please try again' 
         });
     }
 }
 
+/** Resend code */
+const resendCode = async (req, res) => {
+    try{
+        if(!req.body.user_id){
+            res.status(400).send({
+                status: 0, 
+                message: 'User id failed is required.' 
+            });
+        }
+        else{
+            User.find({ _id: req.body.user_id })
+            .exec()
+            .then(result => {
+                const verificationCode = Math.floor(100000 + Math.random() * 900000);
+        
+                User.findByIdAndUpdate(req.body.user_id, { verified: 0, code: verificationCode }, (err, _result) => {
+                    if(err){
+                        res.status(400).send({
+                            status: 0, 
+                            message: 'Something went wrong.' 
+                        });
+                    }
+                    if(_result){
+                        sendEmail(result[0].email, verificationCode, "Verification Code Resend");
+                        res.status(200).send({
+                            status: 1, 
+                            message: 'Verification code resend successfully.' 
+                        });
+                    }
+                });
+            })
+            .catch(err => {
+                res.status(400).send({
+                    status: 0, 
+                    message: 'User not found' 
+                });
+            });
+        }
+    }catch(err){
+        res.status(400).send({
+            status: 0, 
+            message: 'Something went wrong. Please try again.'
+        });
+    }
+}
 
+// reset password
+
+const resetPassword = async (req, res) => {
+    try {
+        if (!req.body.user_id) {
+            res.status(400).send({
+                status: 0,
+                message: 'User id field is required.'
+            });
+        }
+        else if (!req.body.new_password) {
+            res.status(400).send({
+                status: 0,
+                message: 'New password field is required.'
+            });
+        }
+        else {
+            User.find({ _id: req.body.user_id })
+                .exec()
+                .then(user => {
+                    bcrypt.hash(req.body.new_password, 10, (error, hash) => {
+                        if (error) {
+                            return res.status(400).send({
+                                status: 0,
+                                message: error
+                            });
+                        }
+                        else {
+                            User.findByIdAndUpdate(req.body.user_id, { password: hash }, (err, _result) => {
+                                if (err) {
+                                    res.status(400).send({
+                                        status: 0,
+                                        message: 'Something went wrong.'
+                                    });
+                                }
+                                if (_result) {
+                                    res.status(200).send({
+                                        status: 1,
+                                        message: 'Password updated successfully.'
+                                    });
+                                }
+                            });
+                        }
+                    });
+                })
+                .catch(err => {
+                    res.status(400).send({
+                        status: 0,
+                        message: 'User not found.'
+                    });
+                });
+        }
+    }
+    catch (err) {
+        res.status(404).send('error: ' + err.message);
+    }
+}
+//Update Password
+const updatePassword = async (req, res) => {
+    try {
+        if (!req.body.password) {
+            res.status(400).send({
+                status: 0,
+                message: 'Old password field is required.'
+            });
+        }
+        else if (!req.body.new_password) {
+            res.status(400).send({
+                status: 0,
+                message: 'New password field is required.'
+            });
+        }
+        else {
+            const user = await User.findOne({ _id: req.user._id })
+            const isMatch = await bcrypt.compare(req.body.password, user.password)
+            if (!isMatch) {
+                res.status(400).send("Old password is incorrect")
+            }
+            else {
+                const hashedpassword = await bcrypt.hash(req.body.new_password, 10)
+                const newUser = await User.findByIdAndUpdate({_id: req.user._id}, {password: hashedpassword})
+                await newUser.save()
+                res.status(200).send(newUser.email + " has been updated successfully")
+            }
+        }
+    }
+    catch (err) {
+        res.status(404).send('error: ' + err.message)
+    }
+}
 
 // logout
 
@@ -509,4 +574,14 @@ const logout = async (req , res) =>{
 
 
 
-module.exports = {register, login , socialLogin , updatePassword ,  updateProfile ,  forgotPassword , verifyUser , resendCode , logout}
+module.exports = {
+    register, 
+    login ,
+    socialLogin ,
+    updatePassword ,
+    resetPassword ,
+    updateProfile ,
+    forgotPassword ,
+    verifyUser ,
+    resendCode ,
+    logout}
